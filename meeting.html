@@ -1,1 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
 
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <meta name="theme-color"
+          content="#10131c">
+
+    <meta name="description"
+          content="Zenvia - Connect. Meet. Together.">
+
+    <title>Zenvia Meeting</title>
+
+    <!-- Meeting CSS -->
+    <link rel="stylesheet" href="meeting.css">
+</head>
+
+<body>
+
+    <!-- =========================================
+         TOP BAR
+    ========================================== -->
+    <header class="meeting-header">
+
+        <div class="meeting-brand">
+
+            <div class="meeting-logo">
+                <img
+                    src="zenvia-logo.png"
+                    alt="Zenvia Logo"
+                >
+            </div>
+
+            <div class="meeting-brand-text">
+                <h1>Zenvia</h1>
+                <span>Connect. Meet. Together.</span>
+            </div>
+
+        </div>
+
+
+        <div class="meeting-info">
+
+            <div class="connection-status">
+                <span class="status-dot"></span>
+                <span id="connectionText">
+                    Ready
+                </span>
+            </div>
+
+            <div class="meeting-id-box">
+                <span>Meeting ID</span>
+                <strong id="meetingIdDisplay">
+                    ZEN-000-000000
+                </strong>
+            </div>
+
+        </div>
+
+    </header>
+
+
+    <!-- =========================================
+         MAIN MEETING AREA
+    ========================================== -->
+    <main class="meeting-main">
+
+        <!-- VIDEO AREA -->
+        <section class="video-area">
+
+            <!-- Remote / Other Participant -->
+            <div
+                class="video-tile main-video"
+                id="remoteVideoTile"
+            >
+
+                <div class="waiting-screen">
+
+                    <div class="waiting-icon">
+                        👥
+                    </div>
+
+                    <h2>Waiting for others</h2>
+
+                    <p>
+                        Share your meeting ID with someone
+                        to join this meeting.
+                    </p>
+
+                    <button
+                        class="share-meeting-btn"
+                        id="shareMeetingBtn"
+                        type="button"
+                    >
+                        🔗 Share Meeting
+                    </button>
+
+                </div>
+
+                <!-- Future remote video -->
+                <video
+                    id="remoteVideo"
+                    autoplay
+                    playsinline
+                    class="remote-video"
+                ></video>
+
+            </div>
+
+
+            <!-- Local Video -->
+            <div
+                class="video-tile local-video-tile"
+                id="localVideoTile"
+            >
+
+                <video
+                    id="localVideo"
+                    autoplay
+                    muted
+                    playsinline
+                ></video>
+
+                <div
+                    class="camera-off-message"
+                    id="cameraOffMessage"
+                >
+                    <div class="camera-off-icon">
+                        📷
+                    </div>
+
+                    <span>Camera is off</span>
+                </div>
+
+                <div class="local-name">
+                    You
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- =====================================
+             MEETING CONTROLS
+        ====================================== -->
+        <section class="controls-area">
+
+            <div class="controls-left">
+
+                <button
+                    class="control-btn"
+                    id="micBtn"
+                    type="button"
+                    title="Microphone"
+                >
+                    <span class="control-icon">🎤</span>
+                    <span class="control-label">Mic</span>
+                </button>
+
+
+                <button
+                    class="control-btn"
+                    id="cameraBtn"
+                    type="button"
+                    title="Camera"
+                >
+                    <span class="control-icon">📹</span>
+                    <span class="control-label">Camera</span>
+                </button>
+
+
+                <button
+                    class="control-btn"
+                    id="screenShareBtn"
+                    type="button"
+                    title="Share Screen"
+                >
+                    <span class="control-icon">🖥️</span>
+                    <span class="control-label">Share</span>
+                </button>
+
+
+                <button
+                    class="control-btn"
+                    id="participantsBtn"
+                    type="button"
+                    title="Participants"
+                >
+                    <span class="control-icon">👥</span>
+                    <span class="control-label">People</span>
+                </button>
+
+
+                <button
+                    class="control-btn"
+                    id="chatBtn"
+                    type="button"
+                    title="Chat"
+                >
+                    <span class="control-icon">💬</span>
+                    <span class="control-label">Chat</span>
+                </button>
+
+            </div>
+
+
+            <button
+                class="leave-btn"
+                id="leaveBtn"
+                type="button"
+            >
+                <span>📞</span>
+                <span>Leave</span>
+            </button>
+
+        </section>
+
+    </main>
+
+
+    <!-- =========================================
+         PARTICIPANTS PANEL
+    ========================================== -->
+    <aside
+        class="side-panel participants-panel"
+        id="participantsPanel"
+    >
+
+        <div class="panel-header">
+
+            <h2>Participants</h2>
+
+            <button
+                class="close-panel"
+                id="closeParticipants"
+                type="button"
+            >
+                ✕
+            </button>
+
+        </div>
+
+        <div class="panel-content">
+
+            <div class="participant-item">
+
+                <div class="participant-avatar">
+                    Y
+                </div>
+
+                <div class="participant-details">
+                    <strong>You</strong>
+                    <span>Host</span>
+                </div>
+
+                <span class="participant-mic">
+                    🎤
+                </span>
+
+            </div>
+
+            <div class="empty-participants">
+                <div>👥</div>
+                <p>No other participants yet.</p>
+            </div>
+
+        </div>
+
+    </aside>
+
+
+    <!-- =========================================
+         CHAT PANEL
+    ========================================== -->
+    <aside
+        class="side-panel chat-panel"
+        id="chatPanel"
+    >
+
+        <div class="panel-header">
+
+            <h2>Meeting Chat</h2>
+
+            <button
+                class="close-panel"
+                id="closeChat"
+                type="button"
+            >
+                ✕
+            </button>
+
+        </div>
+
+
+        <div
+            class="chat-messages"
+            id="chatMessages"
+        >
+
+            <div class="chat-empty">
+
+                <div class="chat-empty-icon">
+                    💬
+                </div>
+
+                <h3>No messages yet</h3>
+
+                <p>
+                    Messages sent during the meeting
+                    will appear here.
+                </p>
+
+            </div>
+
+        </div>
+
+
+        <form
+            class="chat-input-area"
+            id="chatForm"
+        >
+
+            <input
+                type="text"
+                id="chatInput"
+                placeholder="Type a message..."
+                autocomplete="off"
+            >
+
+            <button
+                type="submit"
+                id="sendChatBtn"
+            >
+                ➤
+            </button>
+
+        </form>
+
+    </aside>
+
+
+    <!-- =========================================
+         SHARE MODAL
+    ========================================== -->
+    <div
+        class="modal-overlay"
+        id="shareModal"
+    >
+
+        <div class="modal-box">
+
+            <button
+                class="modal-close"
+                id="closeShareModal"
+                type="button"
+            >
+                ✕
+            </button>
+
+            <div class="modal-icon">
+                🔗
+            </div>
+
+            <h2>Share Meeting</h2>
+
+            <p>
+                Share this Meeting ID with the person
+                you want to invite.
+            </p>
+
+            <div class="share-id-box">
+
+                <span id="shareMeetingId">
+                    ZEN-000-000000
+                </span>
+
+                <button
+                    id="copyMeetingIdBtn"
+                    type="button"
+                >
+                    Copy
+                </button>
+
+            </div>
+
+            <div
+                class="copy-message"
+                id="copyMessage"
+            ></div>
+
+        </div>
+
+    </div>
+
+
+    <!-- =========================================
+         LEAVE MODAL
+    ========================================== -->
+    <div
+        class="modal-overlay"
+        id="leaveModal"
+    >
+
+        <div class="modal-box leave-modal">
+
+            <div class="modal-icon">
+                👋
+            </div>
+
+            <h2>Leave Meeting?</h2>
+
+            <p>
+                Are you sure you want to leave this meeting?
+            </p>
+
+            <div class="modal-actions">
+
+                <button
+                    class="cancel-btn"
+                    id="cancelLeave"
+                    type="button"
+                >
+                    Cancel
+                </button>
+
+                <button
+                    class="confirm-leave-btn"
+                    id="confirmLeave"
+                    type="button"
+                >
+                    Leave Meeting
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- =========================================
+         PERMISSION / STATUS MESSAGE
+    ========================================== -->
+    <div
+        class="status-message"
+        id="statusMessage"
+    >
+        <span id="statusMessageText"></span>
+    </div>
+
+
+    <!-- =========================================
+         MEETING JAVASCRIPT
+    ========================================== -->
+    <script src="meeting.js"></script>
+
+</body>
+          </html>
