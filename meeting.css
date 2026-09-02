@@ -1341,3 +1341,234 @@ body {
         min-width: 54px;
     }
   }
+/* =========================================================
+   ZENVIA MOBILE SCREEN FIX
+   ========================================================= */
+
+html,
+body {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+}
+
+body {
+    min-width: 0;
+}
+
+/* Header mobile fix */
+.meeting-header,
+.header {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.meeting-header > *,
+.header > * {
+    min-width: 0;
+}
+
+/* Main meeting area */
+.meeting-main,
+.meeting-area,
+.meeting-layout {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    overflow: hidden;
+}
+
+/* Video section */
+.video-area,
+.video-grid,
+.video-container {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+}
+
+/* Video tiles */
+.video-tile {
+    max-width: 100%;
+    min-width: 0;
+}
+
+/* Meeting ID box */
+.meeting-id-box {
+    max-width: 45vw;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.meeting-id-box span,
+.meeting-id-box strong {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Bottom controls */
+.meeting-controls,
+.controls {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+}
+
+.meeting-controls::-webkit-scrollbar,
+.controls::-webkit-scrollbar {
+    display: none;
+}
+
+/* Control buttons */
+.meeting-controls button,
+.controls button {
+    flex: 0 0 auto;
+}
+
+/* =========================================================
+   MOBILE
+   ========================================================= */
+
+@media (max-width: 600px) {
+
+    .meeting-header,
+    .header {
+        padding: 12px 14px;
+        gap: 8px;
+    }
+
+    .meeting-header .brand,
+    .header .brand {
+        min-width: 0;
+        flex: 1;
+    }
+
+    .meeting-header .brand-info,
+    .header .brand-info {
+        min-width: 0;
+    }
+
+    .meeting-header .brand-info h1,
+    .header .brand-info h1 {
+        font-size: 20px;
+    }
+
+    .meeting-header .brand-info p,
+    .header .brand-info p {
+        font-size: 12px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .meeting-id-box {
+        max-width: 42%;
+        padding: 8px 10px;
+    }
+
+    .meeting-id-box .label {
+        font-size: 9px;
+    }
+
+    .meeting-id-box strong {
+        font-size: 12px;
+    }
+
+    /* Video */
+    .video-area,
+    .meeting-main {
+        padding: 10px;
+    }
+
+    .remote-video-tile,
+    #remoteVideoTile {
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
+    }
+
+    /* Local camera preview */
+    .local-video-tile {
+        width: 150px;
+        height: 105px;
+        right: 12px;
+        bottom: 12px;
+    }
+
+    #localVideo {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    /* Waiting screen */
+    .waiting-screen {
+        padding: 20px;
+        text-align: center;
+    }
+
+    .waiting-screen h2 {
+        font-size: 25px;
+    }
+
+    .waiting-screen p {
+        font-size: 15px;
+        line-height: 1.5;
+    }
+
+    .share-meeting-btn {
+        max-width: 100%;
+        font-size: 16px;
+        padding: 14px 20px;
+    }
+
+    /* Bottom controls */
+    .meeting-controls,
+    .controls {
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 8px;
+        padding: 10px 12px;
+    }
+
+    .meeting-controls button,
+    .controls button {
+        width: 62px;
+        min-width: 62px;
+        height: 68px;
+        padding: 6px;
+        flex-shrink: 0;
+    }
+
+    .meeting-controls button span,
+    .controls button span {
+        font-size: 11px;
+    }
+
+    /* Leave button */
+    #leaveBtn {
+        min-width: 72px;
+        width: 72px;
+    }
+
+    /* Side panels */
+    .participants-panel,
+    .chat-panel {
+        width: min(90vw, 360px);
+        max-width: 90vw;
+    }
+
+    /* Modal */
+    .modal-content {
+        width: calc(100% - 30px);
+        max-width: 400px;
+        margin: 15px;
+    }
+}
