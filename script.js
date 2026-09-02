@@ -1,12 +1,13 @@
-/* =========================================================
-   ZENVIA
-   MAIN JAVASCRIPT
-   ========================================================= */
+/* =========================================
+   ZENVIA - HOMEPAGE JAVASCRIPT
+========================================= */
+
+"use strict";
 
 
-/* =========================================================
+/* =========================================
    ELEMENTS
-   ========================================================= */
+========================================= */
 
 const newMeetingBtn =
     document.getElementById("newMeetingBtn");
@@ -30,51 +31,63 @@ const menuBtn =
     document.getElementById("menuBtn");
 
 
-/* =========================================================
+/* =========================================
    GENERATE MEETING ID
-   ========================================================= */
+========================================= */
 
 function generateMeetingId() {
 
     const letters =
-        "ABCDEFGHJKLMNPQRSTUVWXYZ";
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
-    const numbers =
-        "0123456789";
+    let randomLetters = "";
 
-    function randomCharacters(length, characters) {
+    for (let i = 0; i < 3; i++) {
 
-        let result = "";
-
-        for (let i = 0; i < length; i++) {
-
-            const randomIndex =
+        randomLetters +=
+            letters[
                 Math.floor(
-                    Math.random() * characters.length
-                );
-
-            result += characters[randomIndex];
-        }
-
-        return result;
+                    Math.random() *
+                    letters.length
+                )
+            ];
     }
 
-    const part1 =
-        randomCharacters(3, letters);
+    const randomNumber =
+        Math.floor(
+            100000 +
+            Math.random() * 900000
+        );
 
-    const part2 =
-        randomCharacters(3, numbers);
-
-    const part3 =
-        randomCharacters(3, numbers);
-
-    return `ZEN-${part1}-${part2}${part3}`;
+    return `ZEN-${randomLetters}-${randomNumber}`;
 }
 
 
-/* =========================================================
+/* =========================================
+   SHOW JOIN BOX
+========================================= */
+
+function showJoinBox() {
+
+    if (!joinBox) {
+        return;
+    }
+
+    joinBox.style.display = "block";
+
+    setTimeout(() => {
+
+        if (meetingIdInput) {
+            meetingIdInput.focus();
+        }
+
+    }, 100);
+}
+
+
+/* =========================================
    NEW MEETING
-   ========================================================= */
+========================================= */
 
 if (newMeetingBtn) {
 
@@ -86,38 +99,37 @@ if (newMeetingBtn) {
                 generateMeetingId();
 
             /*
-             * अभी हम केवल meeting ID बना रहे हैं।
-             * वास्तविक video room अगले चरण में WebRTC
-             * और signaling server से बनाया जाएगा।
-             */
+               Save the meeting ID
+               so meeting.html can use it.
+            */
 
             localStorage.setItem(
                 "zenviaMeetingId",
                 meetingId
             );
 
-            joinMessage.textContent =
-                "Meeting created: " + meetingId;
+            localStorage.setItem(
+                "zenviaJoinedMeeting",
+                meetingId
+            );
 
-            joinMessage.style.color =
-                "#8d96ff";
+            /*
+               Open the actual meeting room.
+            */
 
-            joinBox.classList.add("active");
-
-            meetingIdInput.value =
-                meetingId;
-
-            meetingIdInput.focus();
-
+            window.location.href =
+                "meeting.html?id=" +
+                encodeURIComponent(
+                    meetingId
+                );
         }
     );
-
 }
 
 
-/* =========================================================
-   SHOW JOIN BOX
-   ========================================================= */
+/* =========================================
+   JOIN MEETING BUTTON
+========================================= */
 
 if (joinMeetingBtn) {
 
@@ -125,93 +137,113 @@ if (joinMeetingBtn) {
         "click",
         function () {
 
-            joinBox.classList.toggle("active");
-
-            if (
-                joinBox.classList.contains("active")
-            ) {
-
-                meetingIdInput.focus();
-
-            }
+            showJoinBox();
 
         }
     );
-
 }
 
 
-/* =========================================================
+/* =========================================
    JOIN MEETING
-   ========================================================= */
+========================================= */
+
+function joinMeeting() {
+
+    if (!meetingIdInput) {
+        return;
+    }
+
+    const meetingId =
+        meetingIdInput.value
+            .trim()
+            .toUpperCase();
+
+    if (!meetingId) {
+
+        if (joinMessage) {
+
+            joinMessage.textContent =
+                "Please enter a Meeting ID.";
+
+            joinMessage.style.color =
+                "#ff6b6b";
+        }
+
+        return;
+    }
+
+
+    /*
+       Basic Meeting ID validation.
+
+       Expected format:
+       ZEN-ABC-123456
+    */
+
+    const meetingPattern =
+        /^ZEN-[A-Z]{3}-[0-9]{6}$/;
+
+
+    if (!meetingPattern.test(meetingId)) {
+
+        if (joinMessage) {
+
+            joinMessage.textContent =
+                "Invalid Meeting ID. Example: ZEN-ABC-123456";
+
+            joinMessage.style.color =
+                "#ff6b6b";
+        }
+
+        return;
+    }
+
+
+    /*
+       Save joined meeting.
+    */
+
+    localStorage.setItem(
+        "zenviaJoinedMeeting",
+        meetingId
+    );
+
+
+    localStorage.setItem(
+        "zenviaMeetingId",
+        meetingId
+    );
+
+
+    /*
+       Open meeting room with ID.
+    */
+
+    window.location.href =
+        "meeting.html?id=" +
+        encodeURIComponent(
+            meetingId
+        );
+}
+
+
+/* =========================================
+   JOIN BUTTON EVENT
+========================================= */
 
 if (joinBtn) {
 
     joinBtn.addEventListener(
         "click",
-        function () {
-
-            const meetingId =
-                meetingIdInput.value.trim();
-
-
-            /* Empty input */
-
-            if (meetingId === "") {
-
-                joinMessage.textContent =
-                    "Please enter a meeting ID.";
-
-                joinMessage.style.color =
-                    "#ff8d8d";
-
-                meetingIdInput.focus();
-
-                return;
-            }
-
-
-            /* Minimum length */
-
-            if (meetingId.length < 5) {
-
-                joinMessage.textContent =
-                    "Please enter a valid meeting ID.";
-
-                joinMessage.style.color =
-                    "#ff8d8d";
-
-                return;
-            }
-
-
-            /*
-             * Temporary meeting behaviour.
-             * Actual video meeting will be connected
-             * after WebRTC implementation.
-             */
-
-            localStorage.setItem(
-                "zenviaJoinedMeeting",
-                meetingId
-            );
-
-
-            joinMessage.textContent =
-                "Meeting ID accepted. Video room coming next.";
-
-            joinMessage.style.color =
-                "#8dffbf";
-
-        }
+        joinMeeting
     );
-
 }
 
 
-/* =========================================================
-   ENTER KEY TO JOIN
-   ========================================================= */
+/* =========================================
+   ENTER KEY
+========================================= */
 
 if (meetingIdInput) {
 
@@ -219,21 +251,23 @@ if (meetingIdInput) {
         "keydown",
         function (event) {
 
-            if (event.key === "Enter") {
+            if (
+                event.key ===
+                "Enter"
+            ) {
 
-                joinBtn.click();
+                event.preventDefault();
 
+                joinMeeting();
             }
-
         }
     );
-
 }
 
 
-/* =========================================================
-   MENU BUTTON
-   ========================================================= */
+/* =========================================
+   MENU
+========================================= */
 
 if (menuBtn) {
 
@@ -241,91 +275,103 @@ if (menuBtn) {
         "click",
         function () {
 
-            alert(
-                "Zenvia Menu\n\n" +
-                "New Meeting\n" +
-                "Join Meeting\n" +
-                "About Zenvia"
-            );
+            const choice =
+                window.confirm(
+                    "Zenvia Menu\n\n" +
+                    "OK = New Meeting\n" +
+                    "Cancel = Close"
+                );
 
+            if (choice) {
+
+                if (newMeetingBtn) {
+                    newMeetingBtn.click();
+                }
+            }
         }
     );
-
 }
 
 
-/* =========================================================
-   AUTO RESTORE LAST MEETING ID
-   ========================================================= */
+/* =========================================
+   RESTORE SAVED MEETING
+========================================= */
 
-window.addEventListener(
+document.addEventListener(
     "DOMContentLoaded",
     function () {
 
-        const savedMeetingId =
+        const savedMeeting =
             localStorage.getItem(
-                "zenviaMeetingId"
+                "zenviaJoinedMeeting"
             );
 
-        if (savedMeetingId) {
+        /*
+           Do not automatically open
+           an old meeting.
 
-            /*
-             * केवल ID को restore किया जाता है।
-             * User की privacy के लिए इसे automatically
-             * join नहीं किया जाता।
-             */
+           We only keep the ID saved
+           for future use.
+        */
 
+        if (savedMeeting) {
+
+            console.log(
+                "Saved Zenvia Meeting:",
+                savedMeeting
+            );
         }
 
     }
 );
 
 
-/* =========================================================
+/* =========================================
    BUTTON PRESS EFFECT
-   ========================================================= */
+========================================= */
 
-document
-    .querySelectorAll("button")
-    .forEach(function (button) {
+const allButtons =
+    document.querySelectorAll(
+        "button"
+    );
+
+allButtons.forEach(
+    button => {
 
         button.addEventListener(
-            "mousedown",
+            "pointerdown",
             function () {
 
-                button.style.transform =
-                    "scale(0.98)";
-
+                this.style.transform =
+                    "scale(0.97)";
             }
         );
 
         button.addEventListener(
-            "mouseup",
+            "pointerup",
             function () {
 
-                button.style.transform =
+                this.style.transform =
                     "";
-
             }
         );
 
         button.addEventListener(
-            "mouseleave",
+            "pointerleave",
             function () {
 
-                button.style.transform =
+                this.style.transform =
                     "";
-
             }
         );
+    }
+);
 
-    });
 
-
-/* =========================================================
+/* =========================================
    ZENVIA READY
-   ========================================================= */
+========================================= */
 
 console.log(
-    "Zenvia is ready."
+    "Zenvia homepage is ready."
 );
