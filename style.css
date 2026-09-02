@@ -915,3 +915,49 @@ a {
     }
 
   }
+/* =========================================
+   ZENVIA LOGO - FIX
+========================================= */
+
+.logo {
+    width: 48px !important;
+    height: 48px !important;
+    min-width: 48px !important;
+    min-height: 48px !important;
+    max-width: 48px !important;
+    max-height: 48px !important;
+
+    overflow: hidden !important;
+    border-radius: 14px;
+    flex-shrink: 0;
+    display: block;
+}
+
+.logo img {
+    width: 48px !important;
+    height: 48px !important;
+    max-width: 48px !important;
+    max-height: 48px !important;
+
+    display: block !important;
+    object-fit: cover !important;
+}
+
+/* Footer logo */
+
+.footer-logo {
+    width: 42px !important;
+    height: 42px !important;
+    max-width: 42px !important;
+    max-height: 42px !important;
+    overflow: hidden !important;
+}
+
+.footer-logo img {
+    width: 42px !important;
+    height: 42px !important;
+    max-width: 42px !important;
+    max-height: 42px !important;
+    display: block !important;
+    object-fit: cover !important;
+}
