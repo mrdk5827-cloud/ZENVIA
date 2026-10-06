@@ -1,20 +1,35 @@
 /* =========================================
-   ZENVIA - MEETING ROOM JAVASCRIPT
+   ZENVIA - WEBRTC MEETING
 ========================================= */
 
 "use strict";
+
+/* =========================================
+   RENDER SIGNALING SERVER
+========================================= */
+
+const SIGNALING_SERVER =
+    "https://zenvia-g2u.onrender.com";
 
 
 /* =========================================
    ELEMENTS
 ========================================= */
 
-const localVideo = document.getElementById("localVideo");
-const remoteVideo = document.getElementById("remoteVideo");
+const localVideo =
+    document.getElementById("localVideo");
 
-const micBtn = document.getElementById("micBtn");
-const cameraBtn = document.getElementById("cameraBtn");
-const screenShareBtn = document.getElementById("screenShareBtn");
+const remoteVideo =
+    document.getElementById("remoteVideo");
+
+const micBtn =
+    document.getElementById("micBtn");
+
+const cameraBtn =
+    document.getElementById("cameraBtn");
+
+const screenShareBtn =
+    document.getElementById("screenShareBtn");
 
 const participantsBtn =
     document.getElementById("participantsBtn");
@@ -95,11 +110,17 @@ const chatMessages =
 
 let localStream = null;
 
+let screenStream = null;
+
+let peerConnection = null;
+
+let remoteSocketId = null;
+
+let socket = null;
+
 let micEnabled = true;
 
 let cameraEnabled = true;
-
-let screenStream = null;
 
 let isScreenSharing = false;
 
@@ -112,15 +133,18 @@ let statusTimer = null;
 
 function generateMeetingId() {
 
-    const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    const letters =
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
     let randomLetters = "";
 
     for (let i = 0; i < 3; i++) {
+
         randomLetters +=
             letters[
                 Math.floor(
-                    Math.random() * letters.length
+                    Math.random() *
+                    letters.length
                 )
             ];
     }
@@ -146,6 +170,7 @@ function getMeetingId() {
         urlParams.get("id");
 
     if (urlMeetingId) {
+
         return urlMeetingId.toUpperCase();
     }
 
@@ -155,6 +180,7 @@ function getMeetingId() {
         );
 
     if (savedMeetingId) {
+
         return savedMeetingId;
     }
 
@@ -181,11 +207,13 @@ const meetingId =
 function displayMeetingId() {
 
     if (meetingIdDisplay) {
+
         meetingIdDisplay.textContent =
             meetingId;
     }
 
     if (shareMeetingId) {
+
         shareMeetingId.textContent =
             meetingId;
     }
@@ -193,20 +221,23 @@ function displayMeetingId() {
 
 
 /* =========================================
-   STATUS MESSAGE
+   STATUS
 ========================================= */
 
 function showStatus(message) {
 
     if (!statusMessage ||
         !statusMessageText) {
+
         return;
     }
 
     statusMessageText.textContent =
         message;
 
-    statusMessage.classList.add("show");
+    statusMessage.classList.add(
+        "show"
+    );
 
     clearTimeout(statusTimer);
 
@@ -231,6 +262,7 @@ function setConnectionStatus(
 ) {
 
     if (connectionText) {
+
         connectionText.textContent =
             text;
     }
@@ -240,24 +272,23 @@ function setConnectionStatus(
             ".status-dot"
         );
 
-    if (dot) {
+    if (!dot) return;
 
-        if (connected) {
+    if (connected) {
 
-            dot.style.background =
-                "#36d98a";
+        dot.style.background =
+            "#36d98a";
 
-            dot.style.boxShadow =
-                "0 0 10px rgba(54,217,138,.6)";
+        dot.style.boxShadow =
+            "0 0 10px rgba(54,217,138,.6)";
 
-        } else {
+    } else {
 
-            dot.style.background =
-                "#ffb020";
+        dot.style.background =
+            "#ffb020";
 
-            dot.style.boxShadow =
-                "0 0 10px rgba(255,176,32,.6)";
-        }
+        dot.style.boxShadow =
+            "0 0 10px rgba(255,176,32,.6)";
     }
 }
 
@@ -267,20 +298,6 @@ function setConnectionStatus(
 ========================================= */
 
 async function startCameraAndMic() {
-
-    if (!navigator.mediaDevices ||
-        !navigator.mediaDevices.getUserMedia) {
-
-        showStatus(
-            "Camera and microphone are not supported here."
-        );
-
-        setConnectionStatus(
-            "Unsupported"
-        );
-
-        return;
-    }
 
     try {
 
@@ -299,30 +316,33 @@ async function startCameraAndMic() {
             localVideo.srcObject =
                 localStream;
 
+            localVideo.muted = true;
+
+            localVideo.playsInline = true;
+
             localVideo.classList.add(
                 "active"
             );
         }
 
         cameraEnabled = true;
+
         micEnabled = true;
 
         updateCameraUI();
+
         updateMicUI();
 
         setConnectionStatus(
-            "Ready",
-            true
+            "Connecting..."
         );
 
-        showStatus(
-            "Camera and microphone are ready."
-        );
+        connectToServer();
 
     } catch (error) {
 
         console.error(
-            "Media permission error:",
+            "Camera/Mic error:",
             error
         );
 
@@ -334,30 +354,566 @@ async function startCameraAndMic() {
             "NotAllowedError") {
 
             showStatus(
-                "Camera/microphone permission was not allowed."
-            );
-
-        } else if (
-            error.name ===
-            "NotFoundError"
-        ) {
-
-            showStatus(
-                "Camera or microphone was not found."
+                "Camera/microphone permission allow karo."
             );
 
         } else {
 
             showStatus(
-                "Could not start camera and microphone."
+                "Camera aur microphone start nahi ho paya."
             );
         }
 
         cameraEnabled = false;
+
         micEnabled = false;
 
         updateCameraUI();
+
         updateMicUI();
+    }
+}
+
+
+/* =========================================
+   SOCKET.IO CONNECTION
+========================================= */
+
+function connectToServer() {
+
+    if (typeof io === "undefined") {
+
+        console.error(
+            "Socket.IO client not found."
+        );
+
+        showStatus(
+            "Socket.IO load nahi hua."
+        );
+
+        return;
+    }
+
+    socket =
+        io(SIGNALING_SERVER, {
+            transports: ["websocket", "polling"]
+        });
+
+
+    /* CONNECTED */
+
+    socket.on(
+        "connect",
+        () => {
+
+            console.log(
+                "Socket connected:",
+                socket.id
+            );
+
+            setConnectionStatus(
+                "Connected",
+                true
+            );
+
+            socket.emit(
+                "join-room",
+                meetingId
+            );
+
+            showStatus(
+                "Meeting room joined."
+            );
+        }
+    );
+
+
+    /* CONNECTION ERROR */
+
+    socket.on(
+        "connect_error",
+        (error) => {
+
+            console.error(
+                "Socket connection error:",
+                error
+            );
+
+            setConnectionStatus(
+                "Server connection failed"
+            );
+
+            showStatus(
+                "Signaling server se connection nahi hua."
+            );
+        }
+    );
+
+
+    /* DISCONNECTED */
+
+    socket.on(
+        "disconnect",
+        () => {
+
+            setConnectionStatus(
+                "Disconnected"
+            );
+
+            console.log(
+                "Socket disconnected"
+            );
+        }
+    );
+
+
+    /* =====================================
+       NEW USER JOINED
+    ===================================== */
+
+    socket.on(
+        "user-joined",
+        async (userId) => {
+
+            console.log(
+                "New user joined:",
+                userId
+            );
+
+            remoteSocketId =
+                userId;
+
+            showStatus(
+                "Another participant joined."
+            );
+
+            await createOffer(userId);
+        }
+    );
+
+
+    /* =====================================
+       RECEIVE OFFER
+    ===================================== */
+
+    socket.on(
+        "offer",
+        async (data) => {
+
+            console.log(
+                "Offer received"
+            );
+
+            remoteSocketId =
+                data.sender;
+
+            await handleOffer(
+                data.offer
+            );
+        }
+    );
+
+
+    /* =====================================
+       RECEIVE ANSWER
+    ===================================== */
+
+    socket.on(
+        "answer",
+        async (data) => {
+
+            console.log(
+                "Answer received"
+            );
+
+            try {
+
+                if (!peerConnection) {
+                    return;
+                }
+
+                await peerConnection.setRemoteDescription(
+                    new RTCSessionDescription(
+                        data.answer
+                    )
+                );
+
+                setConnectionStatus(
+                    "Call connected",
+                    true
+                );
+
+            } catch (error) {
+
+                console.error(
+                    "Answer error:",
+                    error
+                );
+            }
+        }
+    );
+
+
+    /* =====================================
+       ICE CANDIDATE
+    ===================================== */
+
+    socket.on(
+        "ice-candidate",
+        async (data) => {
+
+            try {
+
+                if (!peerConnection) {
+                    return;
+                }
+
+                if (!data.candidate) {
+                    return;
+                }
+
+                await peerConnection.addIceCandidate(
+                    new RTCIceCandidate(
+                        data.candidate
+                    )
+                );
+
+            } catch (error) {
+
+                console.error(
+                    "ICE candidate error:",
+                    error
+                );
+            }
+        }
+    );
+
+
+    /* =====================================
+       USER LEFT
+    ===================================== */
+
+    socket.on(
+        "user-left",
+        (userId) => {
+
+            console.log(
+                "User left:",
+                userId
+            );
+
+            if (
+                remoteSocketId === userId ||
+                !userId
+            ) {
+
+                closePeerConnection();
+
+                if (remoteVideo) {
+
+                    remoteVideo.srcObject =
+                        null;
+                }
+
+                remoteSocketId =
+                    null;
+
+                setConnectionStatus(
+                    "Waiting for participant"
+                );
+
+                showStatus(
+                    "Participant left the meeting."
+                );
+            }
+        }
+    );
+}
+
+
+/* =========================================
+   CREATE PEER CONNECTION
+========================================= */
+
+function createPeerConnection() {
+
+    if (peerConnection) {
+
+        return peerConnection;
+    }
+
+
+    peerConnection =
+        new RTCPeerConnection({
+
+            iceServers: [
+
+                {
+                    urls:
+                        "stun:stun.l.google.com:19302"
+                },
+
+                {
+                    urls:
+                        "stun:stun1.l.google.com:19302"
+                }
+
+            ]
+        });
+
+
+    /* ADD LOCAL TRACKS */
+
+    if (localStream) {
+
+        localStream
+            .getTracks()
+            .forEach(track => {
+
+                peerConnection.addTrack(
+                    track,
+                    localStream
+                );
+            });
+    }
+
+
+    /* REMOTE TRACK */
+
+    peerConnection.ontrack =
+        (event) => {
+
+            console.log(
+                "Remote track received"
+            );
+
+            if (remoteVideo) {
+
+                remoteVideo.srcObject =
+                    event.streams[0];
+
+                remoteVideo.classList.add(
+                    "active"
+                );
+
+                remoteVideo.play()
+                    .catch(() => {});
+            }
+
+            setConnectionStatus(
+                "Call connected",
+                true
+            );
+        };
+
+
+    /* ICE */
+
+    peerConnection.onicecandidate =
+        (event) => {
+
+            if (
+                event.candidate &&
+                socket &&
+                remoteSocketId
+            ) {
+
+                socket.emit(
+                    "ice-candidate",
+                    {
+                        target:
+                            remoteSocketId,
+
+                        candidate:
+                            event.candidate
+                    }
+                );
+            }
+        };
+
+
+    /* CONNECTION STATE */
+
+    peerConnection.onconnectionstatechange =
+        () => {
+
+            console.log(
+                "Peer connection:",
+                peerConnection.connectionState
+            );
+
+            const state =
+                peerConnection.connectionState;
+
+            if (
+                state === "connected"
+            ) {
+
+                setConnectionStatus(
+                    "Call connected",
+                    true
+                );
+
+            } else if (
+                state === "connecting"
+            ) {
+
+                setConnectionStatus(
+                    "Connecting..."
+                );
+
+            } else if (
+                state === "disconnected"
+            ) {
+
+                setConnectionStatus(
+                    "Connection interrupted"
+                );
+
+            } else if (
+                state === "failed"
+            ) {
+
+                setConnectionStatus(
+                    "Connection failed"
+                );
+
+                showStatus(
+                    "Call connection failed."
+                );
+            }
+        };
+
+
+    return peerConnection;
+}
+
+
+/* =========================================
+   CREATE OFFER
+========================================= */
+
+async function createOffer(targetId) {
+
+    try {
+
+        remoteSocketId =
+            targetId;
+
+        const pc =
+            createPeerConnection();
+
+        const offer =
+            await pc.createOffer();
+
+        await pc.setLocalDescription(
+            offer
+        );
+
+        socket.emit(
+            "offer",
+            {
+                target:
+                    targetId,
+
+                offer:
+                    offer
+            }
+        );
+
+        setConnectionStatus(
+            "Calling..."
+        );
+
+    } catch (error) {
+
+        console.error(
+            "Create offer error:",
+            error
+        );
+
+        showStatus(
+            "Call start nahi ho payi."
+        );
+    }
+}
+
+
+/* =========================================
+   HANDLE OFFER
+========================================= */
+
+async function handleOffer(offer) {
+
+    try {
+
+        const pc =
+            createPeerConnection();
+
+        await pc.setRemoteDescription(
+            new RTCSessionDescription(
+                offer
+            )
+        );
+
+        const answer =
+            await pc.createAnswer();
+
+        await pc.setLocalDescription(
+            answer
+        );
+
+        socket.emit(
+            "answer",
+            {
+                target:
+                    remoteSocketId,
+
+                answer:
+                    answer
+            }
+        );
+
+        setConnectionStatus(
+            "Connecting..."
+        );
+
+    } catch (error) {
+
+        console.error(
+            "Handle offer error:",
+            error
+        );
+
+        showStatus(
+            "Call accept nahi ho payi."
+        );
+    }
+}
+
+
+/* =========================================
+   CLOSE PEER CONNECTION
+========================================= */
+
+function closePeerConnection() {
+
+    if (peerConnection) {
+
+        peerConnection.ontrack = null;
+
+        peerConnection.onicecandidate =
+            null;
+
+        peerConnection.close();
+
+        peerConnection = null;
+    }
+
+    if (remoteVideo) {
+
+        remoteVideo.srcObject =
+            null;
     }
 }
 
@@ -371,19 +927,19 @@ function toggleCamera() {
     if (!localStream) {
 
         showStatus(
-            "Camera is not started yet."
+            "Camera start nahi hua."
         );
 
         return;
     }
 
-    const videoTracks =
+    const tracks =
         localStream.getVideoTracks();
 
-    if (!videoTracks.length) {
+    if (!tracks.length) {
 
         showStatus(
-            "No camera track is available."
+            "Camera track nahi mila."
         );
 
         return;
@@ -392,8 +948,9 @@ function toggleCamera() {
     cameraEnabled =
         !cameraEnabled;
 
-    videoTracks.forEach(
+    tracks.forEach(
         track => {
+
             track.enabled =
                 cameraEnabled;
         }
@@ -403,15 +960,21 @@ function toggleCamera() {
 }
 
 
-/* =========================================
-   CAMERA UI
-========================================= */
-
 function updateCameraUI() {
 
     if (!cameraBtn) {
         return;
     }
+
+    const icon =
+        cameraBtn.querySelector(
+            ".control-icon"
+        );
+
+    const label =
+        cameraBtn.querySelector(
+            ".control-label"
+        );
 
     if (cameraEnabled) {
 
@@ -419,15 +982,18 @@ function updateCameraUI() {
             "off"
         );
 
-        cameraBtn.querySelector(
-            ".control-icon"
-        ).textContent = "📹";
+        if (icon) {
+            icon.textContent =
+                "📹";
+        }
 
-        cameraBtn.querySelector(
-            ".control-label"
-        ).textContent = "Camera";
+        if (label) {
+            label.textContent =
+                "Camera";
+        }
 
         if (cameraOffMessage) {
+
             cameraOffMessage.style.display =
                 "none";
         }
@@ -438,15 +1004,18 @@ function updateCameraUI() {
             "off"
         );
 
-        cameraBtn.querySelector(
-            ".control-icon"
-        ).textContent = "🚫";
+        if (icon) {
+            icon.textContent =
+                "🚫";
+        }
 
-        cameraBtn.querySelector(
-            ".control-label"
-        ).textContent = "Camera";
+        if (label) {
+            label.textContent =
+                "Camera";
+        }
 
         if (cameraOffMessage) {
+
             cameraOffMessage.style.display =
                 "flex";
         }
@@ -463,19 +1032,19 @@ function toggleMicrophone() {
     if (!localStream) {
 
         showStatus(
-            "Microphone is not started yet."
+            "Microphone start nahi hua."
         );
 
         return;
     }
 
-    const audioTracks =
+    const tracks =
         localStream.getAudioTracks();
 
-    if (!audioTracks.length) {
+    if (!tracks.length) {
 
         showStatus(
-            "No microphone track is available."
+            "Microphone track nahi mila."
         );
 
         return;
@@ -484,8 +1053,9 @@ function toggleMicrophone() {
     micEnabled =
         !micEnabled;
 
-    audioTracks.forEach(
+    tracks.forEach(
         track => {
+
             track.enabled =
                 micEnabled;
         }
@@ -495,15 +1065,21 @@ function toggleMicrophone() {
 }
 
 
-/* =========================================
-   MICROPHONE UI
-========================================= */
-
 function updateMicUI() {
 
     if (!micBtn) {
         return;
     }
+
+    const icon =
+        micBtn.querySelector(
+            ".control-icon"
+        );
+
+    const label =
+        micBtn.querySelector(
+            ".control-label"
+        );
 
     if (micEnabled) {
 
@@ -511,13 +1087,15 @@ function updateMicUI() {
             "off"
         );
 
-        micBtn.querySelector(
-            ".control-icon"
-        ).textContent = "🎤";
+        if (icon) {
+            icon.textContent =
+                "🎤";
+        }
 
-        micBtn.querySelector(
-            ".control-label"
-        ).textContent = "Mic";
+        if (label) {
+            label.textContent =
+                "Mic";
+        }
 
     } else {
 
@@ -525,13 +1103,15 @@ function updateMicUI() {
             "off"
         );
 
-        micBtn.querySelector(
-            ".control-icon"
-        ).textContent = "🔇";
+        if (icon) {
+            icon.textContent =
+                "🔇";
+        }
 
-        micBtn.querySelector(
-            ".control-label"
-        ).textContent = "Mic";
+        if (label) {
+            label.textContent =
+                "Mic";
+        }
     }
 }
 
@@ -546,11 +1126,12 @@ async function toggleScreenShare() {
         !navigator.mediaDevices.getDisplayMedia) {
 
         showStatus(
-            "Screen sharing is not supported here."
+            "Screen sharing supported nahi hai."
         );
 
         return;
     }
+
 
     if (isScreenSharing) {
 
@@ -558,6 +1139,7 @@ async function toggleScreenShare() {
 
         return;
     }
+
 
     try {
 
@@ -574,17 +1156,42 @@ async function toggleScreenShare() {
             return;
         }
 
+
+        /* Replace video track in WebRTC */
+
+        if (peerConnection) {
+
+            const sender =
+                peerConnection
+                    .getSenders()
+                    .find(
+                        s =>
+                            s.track &&
+                            s.track.kind ===
+                            "video"
+                    );
+
+            if (sender) {
+
+                await sender.replaceTrack(
+                    screenTrack
+                );
+            }
+        }
+
+
         if (localVideo) {
 
             localVideo.srcObject =
                 screenStream;
 
-            localVideo.classList.add(
-                "active"
-            );
+            localVideo.muted = true;
         }
 
-        isScreenSharing = true;
+
+        isScreenSharing =
+            true;
+
 
         if (screenShareBtn) {
 
@@ -592,21 +1199,36 @@ async function toggleScreenShare() {
                 "off"
             );
 
-            screenShareBtn.querySelector(
-                ".control-icon"
-            ).textContent = "⛔";
+            const icon =
+                screenShareBtn.querySelector(
+                    ".control-icon"
+                );
 
-            screenShareBtn.querySelector(
-                ".control-label"
-            ).textContent = "Stop";
+            const label =
+                screenShareBtn.querySelector(
+                    ".control-label"
+                );
+
+            if (icon) {
+                icon.textContent =
+                    "⛔";
+            }
+
+            if (label) {
+                label.textContent =
+                    "Stop";
+            }
         }
+
 
         showStatus(
             "Screen sharing started."
         );
 
+
         screenTrack.onended =
             () => {
+
                 stopScreenShare();
             };
 
@@ -618,7 +1240,7 @@ async function toggleScreenShare() {
         );
 
         showStatus(
-            "Screen sharing was cancelled."
+            "Screen sharing cancelled."
         );
     }
 }
@@ -628,7 +1250,7 @@ async function toggleScreenShare() {
    STOP SCREEN SHARE
 ========================================= */
 
-function stopScreenShare() {
+async function stopScreenShare() {
 
     if (screenStream) {
 
@@ -638,21 +1260,52 @@ function stopScreenShare() {
                 track => track.stop()
             );
 
-        screenStream = null;
+        screenStream =
+            null;
     }
 
-    isScreenSharing = false;
+
+    if (
+        peerConnection &&
+        localStream
+    ) {
+
+        const cameraTrack =
+            localStream.getVideoTracks()[0];
+
+        const sender =
+            peerConnection
+                .getSenders()
+                .find(
+                    s =>
+                        s.track &&
+                        s.track.kind ===
+                        "video"
+                );
+
+        if (
+            sender &&
+            cameraTrack
+        ) {
+
+            await sender.replaceTrack(
+                cameraTrack
+            );
+        }
+    }
+
 
     if (localVideo &&
         localStream) {
 
         localVideo.srcObject =
             localStream;
-
-        localVideo.classList.add(
-            "active"
-        );
     }
+
+
+    isScreenSharing =
+        false;
+
 
     if (screenShareBtn) {
 
@@ -660,14 +1313,27 @@ function stopScreenShare() {
             "off"
         );
 
-        screenShareBtn.querySelector(
-            ".control-icon"
-        ).textContent = "🖥️";
+        const icon =
+            screenShareBtn.querySelector(
+                ".control-icon"
+            );
 
-        screenShareBtn.querySelector(
-            ".control-label"
-        ).textContent = "Share";
+        const label =
+            screenShareBtn.querySelector(
+                ".control-label"
+            );
+
+        if (icon) {
+            icon.textContent =
+                "🖥️";
+        }
+
+        if (label) {
+            label.textContent =
+                "Share";
+        }
     }
+
 
     showStatus(
         "Screen sharing stopped."
@@ -676,18 +1342,20 @@ function stopScreenShare() {
 
 
 /* =========================================
-   PARTICIPANTS PANEL
+   PARTICIPANTS
 ========================================= */
 
 function openParticipants() {
 
     if (chatPanel) {
+
         chatPanel.classList.remove(
             "open"
         );
     }
 
     if (participantsPanel) {
+
         participantsPanel.classList.add(
             "open"
         );
@@ -698,45 +1366,8 @@ function openParticipants() {
 function closeParticipantsPanel() {
 
     if (participantsPanel) {
+
         participantsPanel.classList.remove(
-            "open"
-        );
-    }
-}
-
-
-/* =========================================
-   CHAT PANEL
-========================================= */
-
-function openChat() {
-
-    if (participantsPanel) {
-        participantsPanel.classList.remove(
-            "open"
-        );
-    }
-
-    if (chatPanel) {
-        chatPanel.classList.add(
-            "open"
-        );
-    }
-
-    setTimeout(() => {
-
-        if (chatInput) {
-            chatInput.focus();
-        }
-
-    }, 250);
-}
-
-
-function closeChatPanel() {
-
-    if (chatPanel) {
-        chatPanel.classList.remove(
             "open"
         );
     }
@@ -747,16 +1378,52 @@ function closeChatPanel() {
    CHAT
 ========================================= */
 
+function openChat() {
+
+    if (participantsPanel) {
+
+        participantsPanel.classList.remove(
+            "open"
+        );
+    }
+
+    if (chatPanel) {
+
+        chatPanel.classList.add(
+            "open"
+        );
+    }
+
+    setTimeout(() => {
+
+        if (chatInput) {
+
+            chatInput.focus();
+        }
+
+    }, 250);
+}
+
+
+function closeChatPanel() {
+
+    if (chatPanel) {
+
+        chatPanel.classList.remove(
+            "open"
+        );
+    }
+}
+
+
 function sendChatMessage(message) {
 
     const text =
         message.trim();
 
-    if (!text) {
-        return;
-    }
+    if (!text ||
+        !chatMessages) {
 
-    if (!chatMessages) {
         return;
     }
 
@@ -769,25 +1436,26 @@ function sendChatMessage(message) {
         empty.remove();
     }
 
-    const messageElement =
+    const element =
         document.createElement(
             "div"
         );
 
-    messageElement.style.marginBottom =
+    element.style.marginBottom =
         "12px";
 
-    messageElement.style.padding =
+    element.style.padding =
         "10px 12px";
 
-    messageElement.style.borderRadius =
+    element.style.borderRadius =
         "10px";
 
-    messageElement.style.background =
+    element.style.background =
         "rgba(124,92,255,.15)";
 
-    messageElement.style.border =
+    element.style.border =
         "1px solid rgba(124,92,255,.18)";
+
 
     const name =
         document.createElement(
@@ -803,8 +1471,6 @@ function sendChatMessage(message) {
     name.style.fontSize =
         "11px";
 
-    name.style.marginBottom =
-        "4px";
 
     const body =
         document.createElement(
@@ -817,19 +1483,16 @@ function sendChatMessage(message) {
     body.style.fontSize =
         "13px";
 
-    body.style.lineHeight =
-        "1.4";
+    body.style.marginTop =
+        "4px";
 
-    messageElement.appendChild(
-        name
-    );
 
-    messageElement.appendChild(
-        body
-    );
+    element.appendChild(name);
+
+    element.appendChild(body);
 
     chatMessages.appendChild(
-        messageElement
+        element
     );
 
     chatMessages.scrollTop =
@@ -838,21 +1501,25 @@ function sendChatMessage(message) {
 
 
 /* =========================================
-   SHARE MEETING
+   SHARE
 ========================================= */
 
 function openShareModal() {
 
     if (shareMeetingId) {
+
         shareMeetingId.textContent =
             meetingId;
     }
 
     if (copyMessage) {
-        copyMessage.textContent = "";
+
+        copyMessage.textContent =
+            "";
     }
 
     if (shareModal) {
+
         shareModal.classList.add(
             "show"
         );
@@ -863,16 +1530,13 @@ function openShareModal() {
 function closeShare() {
 
     if (shareModal) {
+
         shareModal.classList.remove(
             "show"
         );
     }
 }
 
-
-/* =========================================
-   COPY MEETING ID
-========================================= */
 
 async function copyMeetingId() {
 
@@ -883,6 +1547,7 @@ async function copyMeetingId() {
         );
 
         if (copyMessage) {
+
             copyMessage.textContent =
                 "Meeting ID copied!";
         }
@@ -893,52 +1558,32 @@ async function copyMeetingId() {
 
     } catch (error) {
 
-        /* Fallback */
-
-        const textArea =
+        const textarea =
             document.createElement(
                 "textarea"
             );
 
-        textArea.value =
+        textarea.value =
             meetingId;
 
         document.body.appendChild(
-            textArea
+            textarea
         );
 
-        textArea.select();
+        textarea.select();
 
-        try {
+        document.execCommand(
+            "copy"
+        );
 
-            document.execCommand(
-                "copy"
-            );
+        textarea.remove();
 
-            if (copyMessage) {
-                copyMessage.textContent =
-                    "Meeting ID copied!";
-            }
-
-            showStatus(
-                "Meeting ID copied."
-            );
-
-        } catch (copyError) {
-
-            showStatus(
-                "Copy failed. Please copy it manually."
-            );
-        }
-
-        textArea.remove();
+        showStatus(
+            "Meeting ID copied."
+        );
     }
 }
 
-
-/* =========================================
-   SHARE LINK
-========================================= */
 
 async function shareMeeting() {
 
@@ -950,10 +1595,15 @@ async function shareMeeting() {
         try {
 
             await navigator.share({
-                title: "Join my Zenvia Meeting",
+
+                title:
+                    "Join my Zenvia Meeting",
+
                 text:
                     `Join my Zenvia meeting. Meeting ID: ${meetingId}`,
-                url: meetingUrl
+
+                url:
+                    meetingUrl
             });
 
             return;
@@ -961,7 +1611,7 @@ async function shareMeeting() {
         } catch (error) {
 
             console.log(
-                "Share cancelled."
+                "Share cancelled"
             );
         }
     }
@@ -971,12 +1621,13 @@ async function shareMeeting() {
 
 
 /* =========================================
-   LEAVE MEETING
+   LEAVE
 ========================================= */
 
 function openLeaveModal() {
 
     if (leaveModal) {
+
         leaveModal.classList.add(
             "show"
         );
@@ -987,6 +1638,7 @@ function openLeaveModal() {
 function closeLeaveModal() {
 
     if (leaveModal) {
+
         leaveModal.classList.remove(
             "show"
         );
@@ -996,7 +1648,16 @@ function closeLeaveModal() {
 
 function leaveMeeting() {
 
+    closePeerConnection();
+
     stopAllMedia();
+
+    if (socket) {
+
+        socket.disconnect();
+
+        socket = null;
+    }
 
     localStorage.removeItem(
         "zenviaJoinedMeeting"
@@ -1008,7 +1669,7 @@ function leaveMeeting() {
 
 
 /* =========================================
-   STOP ALL MEDIA
+   STOP MEDIA
 ========================================= */
 
 function stopAllMedia() {
@@ -1021,7 +1682,8 @@ function stopAllMedia() {
                 track => track.stop()
             );
 
-        screenStream = null;
+        screenStream =
+            null;
     }
 
     if (localStream) {
@@ -1032,15 +1694,20 @@ function stopAllMedia() {
                 track => track.stop()
             );
 
-        localStream = null;
+        localStream =
+            null;
     }
 
     if (localVideo) {
-        localVideo.srcObject = null;
+
+        localVideo.srcObject =
+            null;
     }
 
     if (remoteVideo) {
-        remoteVideo.srcObject = null;
+
+        remoteVideo.srcObject =
+            null;
     }
 }
 
@@ -1174,7 +1841,7 @@ if (chatForm) {
 
     chatForm.addEventListener(
         "submit",
-        function (event) {
+        function(event) {
 
             event.preventDefault();
 
@@ -1186,7 +1853,8 @@ if (chatForm) {
                 chatInput.value
             );
 
-            chatInput.value = "";
+            chatInput.value =
+                "";
 
             chatInput.focus();
         }
@@ -1195,19 +1863,20 @@ if (chatForm) {
 
 
 /* =========================================
-   CLOSE MODALS BY BACKDROP
+   MODALS
 ========================================= */
 
 if (shareModal) {
 
     shareModal.addEventListener(
         "click",
-        function (event) {
+        function(event) {
 
             if (
                 event.target ===
                 shareModal
             ) {
+
                 closeShare();
             }
         }
@@ -1219,12 +1888,13 @@ if (leaveModal) {
 
     leaveModal.addEventListener(
         "click",
-        function (event) {
+        function(event) {
 
             if (
                 event.target ===
                 leaveModal
             ) {
+
                 closeLeaveModal();
             }
         }
@@ -1233,20 +1903,23 @@ if (leaveModal) {
 
 
 /* =========================================
-   ESCAPE KEY
+   ESCAPE
 ========================================= */
 
 document.addEventListener(
     "keydown",
-    function (event) {
+    function(event) {
 
         if (event.key !== "Escape") {
             return;
         }
 
         closeParticipantsPanel();
+
         closeChatPanel();
+
         closeShare();
+
         closeLeaveModal();
     }
 );
@@ -1258,16 +1931,20 @@ document.addEventListener(
 
 window.addEventListener(
     "beforeunload",
-    function () {
+    function() {
 
         stopAllMedia();
 
+        if (socket) {
+
+            socket.disconnect();
+        }
     }
 );
 
 
 /* =========================================
-   START ZENVIA MEETING
+   INITIALIZE
 ========================================= */
 
 function initializeMeeting() {
@@ -1281,12 +1958,6 @@ function initializeMeeting() {
     setConnectionStatus(
         "Starting..."
     );
-
-    /*
-       Small delay gives the page time
-       to finish loading before asking
-       for camera/microphone permission.
-    */
 
     setTimeout(
         startCameraAndMic,
@@ -1312,5 +1983,4 @@ if (
 } else {
 
     initializeMeeting();
-
 }
