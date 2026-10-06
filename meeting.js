@@ -301,23 +301,103 @@ async function startCameraAndMic() {
 
     try {
 
-        setConnectionStatus(
-            "Requesting access..."
-        );
+        setConnectionStatus("Checking camera...");
 
-        localStream =
+        // Browser support check
+        if (!navigator.mediaDevices) {
+            throw new Error(
+                "mediaDevices API available nahi hai"
+            );
+        }
+
+        if (!navigator.mediaDevices.getUserMedia) {
+            throw new Error(
+                "getUserMedia available nahi hai"
+            );
+        }
+
+        console.log("Requesting camera...");
+
+        // STEP 1: Camera only
+        let cameraStream =
             await navigator.mediaDevices.getUserMedia({
                 video: true,
-                audio: true
+                audio: false
             });
 
+        console.log("Camera OK");
+
+        // STEP 2: Microphone separately
+        setConnectionStatus("Checking microphone...");
+
+        let micStream;
+
+        try {
+
+            micStream =
+                await navigator.mediaDevices.getUserMedia({
+                    video: false,
+                    audio: true
+                });
+
+            console.log("Microphone OK");
+
+        } catch (micError) {
+
+            console.error(
+                "Microphone error:",
+                micError.name,
+                micError.message
+            );
+
+            // Camera still works
+            localStream = cameraStream;
+
+            if (localVideo) {
+                localVideo.srcObject =
+                    localStream;
+
+                localVideo.muted = true;
+                localVideo.playsInline = true;
+                localVideo.classList.add("active");
+            }
+
+            cameraEnabled = true;
+            micEnabled = false;
+
+            updateCameraUI();
+            updateMicUI();
+
+            setConnectionStatus(
+                "Camera ready"
+            );
+
+            showStatus(
+                "Camera chal raha hai, lekin microphone start nahi hua: " +
+                micError.name
+            );
+
+            connectToServer();
+
+            return;
+        }
+
+        // Combine camera + microphone
+        const tracks = [
+            ...cameraStream.getVideoTracks(),
+            ...micStream.getAudioTracks()
+        ];
+
+        localStream =
+            new MediaStream(tracks);
+
+        // Show local video
         if (localVideo) {
 
             localVideo.srcObject =
                 localStream;
 
             localVideo.muted = true;
-
             localVideo.playsInline = true;
 
             localVideo.classList.add(
@@ -326,15 +406,17 @@ async function startCameraAndMic() {
         }
 
         cameraEnabled = true;
-
         micEnabled = true;
 
         updateCameraUI();
-
         updateMicUI();
 
         setConnectionStatus(
-            "Connecting..."
+            "Camera + Microphone ready"
+        );
+
+        showStatus(
+            "Camera aur microphone ready hain."
         );
 
         connectToServer();
@@ -342,37 +424,29 @@ async function startCameraAndMic() {
     } catch (error) {
 
         console.error(
-            "Camera/Mic error:",
-            error
+            "Camera error:",
+            error.name,
+            error.message
         );
 
         setConnectionStatus(
-            "Permission needed"
+            "Camera failed"
         );
 
-        if (error.name ===
-            "NotAllowedError") {
-
-            showStatus(
-                "Camera/microphone permission allow karo."
-            );
-
-        } else {
-
-            showStatus(
-                "Camera aur microphone start nahi ho paya."
-            );
-        }
+        showStatus(
+            "Camera start nahi hua: " +
+            error.name +
+            " - " +
+            error.message
+        );
 
         cameraEnabled = false;
-
         micEnabled = false;
 
         updateCameraUI();
-
         updateMicUI();
     }
-}
+   }
 
 
 /* =========================================
