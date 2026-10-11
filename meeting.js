@@ -8,8 +8,7 @@
    RENDER SIGNALING SERVER
 ========================================= */
 
-const SIGNALING_SERVER =
-    "https://zenvia-g2u.onrender.com";
+const SIGNALING_SERVER = "https://zenvia-g2u7.onrender.com";
 
 
 /* =========================================
