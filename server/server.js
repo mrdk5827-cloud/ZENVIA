@@ -37,28 +37,38 @@ io.on("connection", (socket) => {
        JOIN ROOM
     ========================== */
 
-    socket.on("join-room", (roomId) => {
+    
+socket.on("join-room", async (roomId) => {
 
-        socket.join(roomId);
+    if (typeof roomId !== "string" || !roomId.trim()) {
+        socket.emit("room-error", "Invalid Meeting ID");
+        return;
+    }
 
-        console.log(
-            socket.id,
-            "joined room:",
-            roomId
-        );
+    roomId = roomId.trim().toUpperCase();
 
+    await socket.join(roomId);
 
-        /*
-         * Tell other users
-         * that a new user joined.
-         */
+    const clients = await io.in(roomId).fetchSockets();
 
-        socket.to(roomId).emit(
-            "user-joined",
-            socket.id
-        );
+    console.log(
+        "ROOM CHECK:",
+        roomId,
+        "| Participants:",
+        clients.length,
+        "| Socket:",
+        socket.id
+    );
 
+    socket.emit("room-joined", {
+        roomId: roomId,
+        participants: clients.length
     });
+
+    socket.to(roomId).emit("user-joined", socket.id);
+
+});
+
 
 
     /* ==========================
