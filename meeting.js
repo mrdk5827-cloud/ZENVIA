@@ -321,68 +321,130 @@ function createVirtualStream(userName) {
     return canvasStream;
 }
 
-async function startCameraAndMic() {
-    // 1. Immediately create and attach instant virtual stream so UI has 0ms load delay
-    isVirtualCamera = true;
-    localStream = createVirtualStream(myUserName);
-
-    if (localVideo) {
-        localVideo.srcObject = localStream;
-        localVideo.muted = true;
-        localVideo.playsInline = true;
-        localVideo.classList.add("active");
+async function requestRealCamera(userTriggered = false) {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        if (userTriggered) showStatus("Camera not supported on this device/browser.");
+        return false;
     }
 
-    cameraEnabled = true;
-    micEnabled = true;
-    updateCameraUI();
-    updateMicUI();
-    setupLocalAudioMonitor(localStream);
+    try {
+        if (userTriggered) setConnectionStatus("Accessing camera...");
+        let stream = null;
 
-    // 2. In background, attempt real camera/mic with 2.5s timeout (non-blocking)
-    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        // Try standard mobile constraints first
         try {
-            const mediaPromise = navigator.mediaDevices.getUserMedia({
-                video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: currentFacingMode },
-                audio: { echoCancellation: true, noiseSuppression: true }
+            stream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: currentFacingMode },
+                audio: true
             });
-
-            const timeoutPromise = new Promise((_, reject) => 
-                setTimeout(() => reject(new Error("Camera prompt timeout")), 2500)
-            );
-
-            const realStream = await Promise.race([mediaPromise, timeoutPromise]);
-
-            // Real camera acquired: replace tracks smoothly
-            if (localStream && localStream._stopLoop) {
-                localStream._stopLoop();
+        } catch (e1) {
+            console.log("FacingMode attempt failed, trying basic video+audio:", e1.name);
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({
+                    video: true,
+                    audio: true
+                });
+            } catch (e2) {
+                console.log("Video+Audio failed, trying video only:", e2.name);
+                stream = await navigator.mediaDevices.getUserMedia({
+                    video: true,
+                    audio: false
+                });
             }
-
-            localStream = realStream;
-            isVirtualCamera = false;
-
-            if (localVideo) {
-                localVideo.srcObject = localStream;
-            }
-
-            // Update tracks in active WebRTC peer connections
-            const newVideoTrack = realStream.getVideoTracks()[0];
-            const newAudioTrack = realStream.getAudioTracks()[0];
-
-            peerConnections.forEach(pc => {
-                const vSender = pc.getSenders().find(s => s.track && s.track.kind === "video");
-                if (vSender && newVideoTrack) vSender.replaceTrack(newVideoTrack);
-
-                const aSender = pc.getSenders().find(s => s.track && s.track.kind === "audio");
-                if (aSender && newAudioTrack) aSender.replaceTrack(newAudioTrack);
-            });
-
-            checkCameraDevices();
-            setupLocalAudioMonitor(realStream);
-            console.log("Real camera & mic activated.");
-        } catch (err) {
-            console.log("Using Virtual Video Mode:", err.message);
         }
+
+        if (!stream) throw new Error("No camera stream available");
+
+        // Stop any old virtual animation loop
+        if (localStream && localStream._stopLoop) {
+            localStream._stopLoop();
+        }
+        if (localStream && isVirtualCamera) {
+            localStream.getTracks().forEach(t => t.stop());
+        }
+
+        localStream = stream;
+        isVirtualCamera = false;
+
+        if (localVideo) {
+            localVideo.srcObject = localStream;
+            localVideo.muted = true;
+            localVideo.setAttribute("playsinline", "true");
+            localVideo.setAttribute("webkit-playsinline", "true");
+            localVideo.classList.add("active");
+            try {
+                await localVideo.play();
+            } catch (playErr) {
+                console.log("Video play call note:", playErr);
+            }
+        }
+
+        cameraEnabled = true;
+        updateCameraUI();
+        checkCameraDevices();
+        setupLocalAudioMonitor(localStream);
+
+        // Update tracks in active WebRTC peer connections
+        const newVideoTrack = localStream.getVideoTracks()[0];
+        const newAudioTrack = localStream.getAudioTracks()[0];
+
+        peerConnections.forEach(pc => {
+            if (newVideoTrack) {
+                const vSender = pc.getSenders().find(s => s.track && s.track.kind === "video");
+                if (vSender) vSender.replaceTrack(newVideoTrack);
+            }
+            if (newAudioTrack) {
+                const aSender = pc.getSenders().find(s => s.track && s.track.kind === "audio");
+                if (aSender) aSender.replaceTrack(newAudioTrack);
+            }
+        });
+
+        if (socket) {
+            socket.emit("user-media-state", {
+                micOn: micEnabled,
+                cameraOn: true,
+                isScreenSharing: isScreenSharing
+            });
+        }
+
+        setConnectionStatus("Camera connected", true);
+        showStatus("Real camera is now active!");
+        return true;
+    } catch (err) {
+        console.warn("Real camera request failed:", err);
+        if (userTriggered) {
+            showStatus("Camera permission denied. Please allow camera in browser address bar.");
+        }
+        return false;
+    }
+}
+
+async function startCameraAndMic() {
+    // Attempt real camera immediately
+    const realSuccess = await requestRealCamera(false);
+
+    // If real camera permission denied or unavailable, use virtual avatar fallback
+    if (!realSuccess && !localStream) {
+        console.log("Falling back to Virtual Avatar stream");
+        isVirtualCamera = true;
+        localStream = createVirtualStream(myUserName);
+
+        if (localVideo) {
+            localVideo.srcObject = localStream;
+            localVideo.muted = true;
+            localVideo.setAttribute("playsinline", "true");
+            localVideo.setAttribute("webkit-playsinline", "true");
+            localVideo.classList.add("active");
+            localVideo.play().catch(() => {});
+        }
+
+        cameraEnabled = true;
+        micEnabled = true;
+        updateCameraUI();
+        updateMicUI();
+        setupLocalAudioMonitor(localStream);
+
+        showStatus("Tap Camera icon or video tile to turn on your real camera 📷", 4000);
     }
 }
 
@@ -921,9 +983,16 @@ function stopTestBot() {
    CONTROLS: MIC, CAMERA, SCREEN, PIP
 ========================================= */
 function toggleCamera() {
-    if (!localStream) return;
+    if (isVirtualCamera || !localStream) {
+        requestRealCamera(true);
+        return;
+    }
+
     const tracks = localStream.getVideoTracks();
-    if (!tracks.length) return;
+    if (!tracks.length) {
+        requestRealCamera(true);
+        return;
+    }
 
     cameraEnabled = !cameraEnabled;
     tracks.forEach(track => {
@@ -1415,6 +1484,17 @@ function setupEventListeners() {
     if (screenShareBtn) screenShareBtn.addEventListener("click", toggleScreenShare);
     if (pipBtn) pipBtn.addEventListener("click", togglePictureInPicture);
     if (handBtn) handBtn.addEventListener("click", toggleRaiseHand);
+
+    // Tap local video tile to enable real camera
+    if (localVideoTile) {
+        localVideoTile.style.cursor = "pointer";
+        localVideoTile.title = "Tap to enable real camera";
+        localVideoTile.addEventListener("click", () => {
+            if (isVirtualCamera) {
+                requestRealCamera(true);
+            }
+        });
+    }
 
     // Reactions
     if (reactionsBtn) reactionsBtn.addEventListener("click", toggleReactionsPicker);
