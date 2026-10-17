@@ -322,36 +322,10 @@ function createVirtualStream(userName) {
 }
 
 async function startCameraAndMic() {
-    setConnectionStatus("Accessing camera & mic...");
+    // 1. Immediately create and attach instant virtual stream so UI has 0ms load delay
+    isVirtualCamera = true;
+    localStream = createVirtualStream(myUserName);
 
-    try {
-        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-            throw new Error("getUserMedia not supported in this browser");
-        }
-
-        localStream = await navigator.mediaDevices.getUserMedia({
-            video: {
-                width: { ideal: 1280 },
-                height: { ideal: 720 },
-                facingMode: currentFacingMode
-            },
-            audio: {
-                echoCancellation: true,
-                noiseSuppression: true,
-                autoGainControl: true
-            }
-        });
-
-        isVirtualCamera = false;
-        console.log("Real camera and mic obtained successfully.");
-    } catch (err) {
-        console.warn("Real media request failed, falling back gracefully to Virtual Video:", err);
-        isVirtualCamera = true;
-        localStream = createVirtualStream(myUserName);
-        showStatus("Webcam not detected. Virtual Video mode active.");
-    }
-
-    // Attach to local video element
     if (localVideo) {
         localVideo.srcObject = localStream;
         localVideo.muted = true;
@@ -363,15 +337,53 @@ async function startCameraAndMic() {
     micEnabled = true;
     updateCameraUI();
     updateMicUI();
-
-    // Check multiple cameras (e.g. mobile front/back)
-    checkCameraDevices();
-
-    // Setup speech detection
     setupLocalAudioMonitor(localStream);
 
-    // Connect to signaling
-    connectToServer();
+    // 2. In background, attempt real camera/mic with 2.5s timeout (non-blocking)
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        try {
+            const mediaPromise = navigator.mediaDevices.getUserMedia({
+                video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: currentFacingMode },
+                audio: { echoCancellation: true, noiseSuppression: true }
+            });
+
+            const timeoutPromise = new Promise((_, reject) => 
+                setTimeout(() => reject(new Error("Camera prompt timeout")), 2500)
+            );
+
+            const realStream = await Promise.race([mediaPromise, timeoutPromise]);
+
+            // Real camera acquired: replace tracks smoothly
+            if (localStream && localStream._stopLoop) {
+                localStream._stopLoop();
+            }
+
+            localStream = realStream;
+            isVirtualCamera = false;
+
+            if (localVideo) {
+                localVideo.srcObject = localStream;
+            }
+
+            // Update tracks in active WebRTC peer connections
+            const newVideoTrack = realStream.getVideoTracks()[0];
+            const newAudioTrack = realStream.getAudioTracks()[0];
+
+            peerConnections.forEach(pc => {
+                const vSender = pc.getSenders().find(s => s.track && s.track.kind === "video");
+                if (vSender && newVideoTrack) vSender.replaceTrack(newVideoTrack);
+
+                const aSender = pc.getSenders().find(s => s.track && s.track.kind === "audio");
+                if (aSender && newAudioTrack) aSender.replaceTrack(newAudioTrack);
+            });
+
+            checkCameraDevices();
+            setupLocalAudioMonitor(realStream);
+            console.log("Real camera & mic activated.");
+        } catch (err) {
+            console.log("Using Virtual Video Mode:", err.message);
+        }
+    }
 }
 
 async function checkCameraDevices() {
@@ -461,8 +473,11 @@ function connectToServer() {
     setConnectionStatus("Joining room...");
 
     socket = io(SIGNALING_SERVER, {
-        transports: ["websocket", "polling"],
-        timeout: 10000
+        transports: ["polling", "websocket"],
+        reconnection: true,
+        reconnectionDelay: 1000,
+        reconnectionAttempts: 10,
+        timeout: 8000
     });
 
     socket.on("connect", () => {
@@ -1520,6 +1535,7 @@ function initialize() {
     if (localAvatar) localAvatar.textContent = (myUserName[0] || "Y").toUpperCase();
 
     setupEventListeners();
+    connectToServer();
     startCameraAndMic();
 }
 

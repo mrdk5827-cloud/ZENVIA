@@ -17,8 +17,18 @@ const io = new Server(server, {
 // roomId -> Map<socketId, { socketId, userName, isHost, micOn, cameraOn, isScreenSharing, joinedAt }>
 const activeRooms = new Map();
 
-// Serve static frontend files
-app.use(express.static(path.join(__dirname)));
+// Serve static frontend files with optimal caching
+app.use(express.static(path.join(__dirname), {
+    maxAge: "1h",
+    etag: true,
+    setHeaders: (res, filePath) => {
+        if (filePath.endsWith(".html")) {
+            res.setHeader("Cache-Control", "no-cache");
+        } else {
+            res.setHeader("Cache-Control", "public, max-age=3600");
+        }
+    }
+}));
 
 // API routes
 app.get("/api/health", (req, res) => {

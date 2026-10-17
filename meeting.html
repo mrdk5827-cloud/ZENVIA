@@ -316,14 +316,8 @@
         <span id="statusMessageText"></span>
     </div>
 
-    <!-- Socket.IO client (local server + CDN fallback) -->
+    <!-- Socket.IO client served directly by local server -->
     <script src="/socket.io/socket.io.js"></script>
-    <script>
-        if (typeof io === 'undefined') {
-            document.write('<script src="https://cdn.socket.io/4.8.1/socket.io.min.js"><\/script>');
-        }
-    </script>
-    <script src="meeting.js"></script>
-
+    <script src="meeting.js" defer></script>
 </body>
 </html>
