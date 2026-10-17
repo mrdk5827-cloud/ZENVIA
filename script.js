@@ -4,374 +4,186 @@
 
 "use strict";
 
+const newMeetingBtn = document.getElementById("newMeetingBtn");
+const joinMeetingBtn = document.getElementById("joinMeetingBtn");
+const joinBox = document.getElementById("joinBox");
+const meetingIdInput = document.getElementById("meetingId");
+const joinBtn = document.getElementById("joinBtn");
+const joinMessage = document.getElementById("joinMessage");
+const userNameInput = document.getElementById("userNameInput");
+const menuBtn = document.getElementById("menuBtn");
 
 /* =========================================
-   ELEMENTS
+   USER NAME PERSISTENCE
 ========================================= */
+function initUserName() {
+    if (!userNameInput) return;
+    const savedName = localStorage.getItem("zenviaUserName");
+    if (savedName && savedName.trim()) {
+        userNameInput.value = savedName.trim();
+    }
 
-const newMeetingBtn =
-    document.getElementById("newMeetingBtn");
+    userNameInput.addEventListener("input", () => {
+        const val = userNameInput.value.trim();
+        if (val) {
+            localStorage.setItem("zenviaUserName", val);
+        }
+    });
+}
 
-const joinMeetingBtn =
-    document.getElementById("joinMeetingBtn");
-
-const joinBox =
-    document.getElementById("joinBox");
-
-const meetingIdInput =
-    document.getElementById("meetingId");
-
-const joinBtn =
-    document.getElementById("joinBtn");
-
-const joinMessage =
-    document.getElementById("joinMessage");
-
-const menuBtn =
-    document.getElementById("menuBtn");
-
+function getEnteredUserName() {
+    if (userNameInput && userNameInput.value.trim()) {
+        const name = userNameInput.value.trim();
+        localStorage.setItem("zenviaUserName", name);
+        return name;
+    }
+    const saved = localStorage.getItem("zenviaUserName");
+    if (saved && saved.trim()) return saved.trim();
+    const generated = "User " + Math.floor(100 + Math.random() * 900);
+    localStorage.setItem("zenviaUserName", generated);
+    return generated;
+}
 
 /* =========================================
    GENERATE MEETING ID
 ========================================= */
-
 function generateMeetingId() {
-
-    const letters =
-        "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-
+    const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
     let randomLetters = "";
-
     for (let i = 0; i < 3; i++) {
-
-        randomLetters +=
-            letters[
-                Math.floor(
-                    Math.random() *
-                    letters.length
-                )
-            ];
+        randomLetters += letters[Math.floor(Math.random() * letters.length)];
     }
-
-    const randomNumber =
-        Math.floor(
-            100000 +
-            Math.random() * 900000
-        );
-
+    const randomNumber = Math.floor(100000 + Math.random() * 900000);
     return `ZEN-${randomLetters}-${randomNumber}`;
 }
-
 
 /* =========================================
    SHOW JOIN BOX
 ========================================= */
-
 function showJoinBox() {
-
-    if (!joinBox) {
-        return;
-    }
-
+    if (!joinBox) return;
     joinBox.style.display = "block";
-
+    joinBox.classList.add("active");
     setTimeout(() => {
-
         if (meetingIdInput) {
             meetingIdInput.focus();
+            meetingIdInput.scrollIntoView({ behavior: "smooth", block: "center" });
         }
-
     }, 100);
 }
-
 
 /* =========================================
    NEW MEETING
 ========================================= */
-
 if (newMeetingBtn) {
+    newMeetingBtn.addEventListener("click", () => {
+        const meetingId = generateMeetingId();
+        const userName = getEnteredUserName();
 
-    newMeetingBtn.addEventListener(
-        "click",
-        function () {
+        localStorage.setItem("zenviaMeetingId", meetingId);
+        localStorage.setItem("zenviaJoinedMeeting", meetingId);
 
-            const meetingId =
-                generateMeetingId();
-
-            /*
-               Save the meeting ID
-               so meeting.html can use it.
-            */
-
-            localStorage.setItem(
-                "zenviaMeetingId",
-                meetingId
-            );
-
-            localStorage.setItem(
-                "zenviaJoinedMeeting",
-                meetingId
-            );
-
-            /*
-               Open the actual meeting room.
-            */
-
-            window.location.href =
-                "meeting.html?id=" +
-                encodeURIComponent(
-                    meetingId
-                );
-        }
-    );
+        window.location.href = `meeting.html?id=${encodeURIComponent(meetingId)}&name=${encodeURIComponent(userName)}`;
+    });
 }
-
 
 /* =========================================
    JOIN MEETING BUTTON
 ========================================= */
-
 if (joinMeetingBtn) {
-
-    joinMeetingBtn.addEventListener(
-        "click",
-        function () {
-
-            showJoinBox();
-
-        }
-    );
+    joinMeetingBtn.addEventListener("click", () => {
+        showJoinBox();
+    });
 }
 
-
 /* =========================================
-   JOIN MEETING
+   JOIN MEETING HANDLER
 ========================================= */
-
 function joinMeeting() {
+    if (!meetingIdInput) return;
+    let inputVal = meetingIdInput.value.trim();
 
-    if (!meetingIdInput) {
-        return;
-    }
-
-    const meetingId =
-        meetingIdInput.value
-            .trim()
-            .toUpperCase();
-
-    if (!meetingId) {
-
+    if (!inputVal) {
         if (joinMessage) {
-
-            joinMessage.textContent =
-                "Please enter a Meeting ID.";
-
-            joinMessage.style.color =
-                "#ff6b6b";
+            joinMessage.textContent = "Please enter a Meeting ID or link.";
+            joinMessage.style.color = "#ff6b6b";
         }
-
         return;
     }
 
+    // Handle full URL pasted (e.g. https://.../meeting.html?id=ZEN-ABC-123456)
+    if (inputVal.includes("?id=")) {
+        try {
+            const urlObj = new URL(inputVal.startsWith("http") ? inputVal : `http://${inputVal}`);
+            const extractedId = urlObj.searchParams.get("id");
+            if (extractedId) inputVal = extractedId;
+        } catch (e) {
+            const match = inputVal.match(/[?&]id=([^&]+)/);
+            if (match && match[1]) inputVal = match[1];
+        }
+    }
 
-    /*
-       Basic Meeting ID validation.
+    let meetingId = inputVal.trim().toUpperCase();
 
-       Expected format:
-       ZEN-ABC-123456
-    */
+    // Auto-prefix ZEN- if user typed ABC-123456
+    if (/^[A-Z]{3}-[0-9]{6}$/.test(meetingId)) {
+        meetingId = `ZEN-${meetingId}`;
+    }
 
-    const meetingPattern =
-        /^ZEN-[A-Z]{3}-[0-9]{6}$/;
-
-
-    if (!meetingPattern.test(meetingId)) {
-
+    if (meetingId.length < 3) {
         if (joinMessage) {
-
-            joinMessage.textContent =
-                "Invalid Meeting ID. Example: ZEN-ABC-123456";
-
-            joinMessage.style.color =
-                "#ff6b6b";
+            joinMessage.textContent = "Meeting code is too short.";
+            joinMessage.style.color = "#ff6b6b";
         }
-
         return;
     }
 
+    const userName = getEnteredUserName();
+    localStorage.setItem("zenviaJoinedMeeting", meetingId);
+    localStorage.setItem("zenviaMeetingId", meetingId);
 
-    /*
-       Save joined meeting.
-    */
-
-    localStorage.setItem(
-        "zenviaJoinedMeeting",
-        meetingId
-    );
-
-
-    localStorage.setItem(
-        "zenviaMeetingId",
-        meetingId
-    );
-
-
-    /*
-       Open meeting room with ID.
-    */
-
-    window.location.href =
-        "meeting.html?id=" +
-        encodeURIComponent(
-            meetingId
-        );
+    window.location.href = `meeting.html?id=${encodeURIComponent(meetingId)}&name=${encodeURIComponent(userName)}`;
 }
-
-
-/* =========================================
-   JOIN BUTTON EVENT
-========================================= */
 
 if (joinBtn) {
-
-    joinBtn.addEventListener(
-        "click",
-        joinMeeting
-    );
+    joinBtn.addEventListener("click", joinMeeting);
 }
-
-
-/* =========================================
-   ENTER KEY
-========================================= */
 
 if (meetingIdInput) {
-
-    meetingIdInput.addEventListener(
-        "keydown",
-        function (event) {
-
-            if (
-                event.key ===
-                "Enter"
-            ) {
-
-                event.preventDefault();
-
-                joinMeeting();
-            }
+    meetingIdInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+            e.preventDefault();
+            joinMeeting();
         }
-    );
+    });
 }
-
 
 /* =========================================
    MENU
 ========================================= */
-
 if (menuBtn) {
-
-    menuBtn.addEventListener(
-        "click",
-        function () {
-
-            const choice =
-                window.confirm(
-                    "Zenvia Menu\n\n" +
-                    "OK = New Meeting\n" +
-                    "Cancel = Close"
-                );
-
-            if (choice) {
-
-                if (newMeetingBtn) {
-                    newMeetingBtn.click();
-                }
-            }
+    menuBtn.addEventListener("click", () => {
+        const choice = window.confirm("Zenvia Video Meetings\n\nClick OK to start a New Meeting\nClick Cancel to close menu");
+        if (choice && newMeetingBtn) {
+            newMeetingBtn.click();
         }
-    );
+    });
 }
 
+// Button press feedback
+document.querySelectorAll("button").forEach(btn => {
+    btn.addEventListener("pointerdown", function () {
+        this.style.transform = "scale(0.97)";
+    });
+    btn.addEventListener("pointerup", function () {
+        this.style.transform = "";
+    });
+    btn.addEventListener("pointerleave", function () {
+        this.style.transform = "";
+    });
+});
 
-/* =========================================
-   RESTORE SAVED MEETING
-========================================= */
-
-document.addEventListener(
-    "DOMContentLoaded",
-    function () {
-
-        const savedMeeting =
-            localStorage.getItem(
-                "zenviaJoinedMeeting"
-            );
-
-        /*
-           Do not automatically open
-           an old meeting.
-
-           We only keep the ID saved
-           for future use.
-        */
-
-        if (savedMeeting) {
-
-            console.log(
-                "Saved Zenvia Meeting:",
-                savedMeeting
-            );
-        }
-
-    }
-);
-
-
-/* =========================================
-   BUTTON PRESS EFFECT
-========================================= */
-
-const allButtons =
-    document.querySelectorAll(
-        "button"
-    );
-
-allButtons.forEach(
-    button => {
-
-        button.addEventListener(
-            "pointerdown",
-            function () {
-
-                this.style.transform =
-                    "scale(0.97)";
-            }
-        );
-
-        button.addEventListener(
-            "pointerup",
-            function () {
-
-                this.style.transform =
-                    "";
-            }
-        );
-
-        button.addEventListener(
-            "pointerleave",
-            function () {
-
-                this.style.transform =
-                    "";
-            }
-        );
-    }
-);
-
-
-/* =========================================
-   ZENVIA READY
-========================================= */
-
-console.log(
-    "Zenvia homepage is ready."
-);
+document.addEventListener("DOMContentLoaded", () => {
+    initUserName();
+    console.log("Zenvia video calling app ready.");
+});

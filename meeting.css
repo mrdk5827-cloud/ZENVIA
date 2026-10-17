@@ -1452,3 +1452,377 @@ body {
         min-width: 55px;
     }
    }
+
+
+/* =========================================
+   ZENVIA ENHANCED VIDEO CONTROLS & STYLES
+========================================= */
+
+/* CALL TIMER BADGE */
+.call-timer-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    font-size: 13px;
+    font-weight: 600;
+    color: #e2e8f0;
+    letter-spacing: 0.5px;
+}
+
+.timer-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #ff4757;
+    box-shadow: 0 0 8px rgba(255, 71, 87, 0.8);
+    animation: pulseRed 1.8s infinite ease-in-out;
+}
+
+@keyframes pulseRed {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.85); }
+}
+
+.meeting-center-info {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#headerMeetingIdBox {
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+#headerMeetingIdBox:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(124, 92, 255, 0.4);
+}
+
+/* WAITING ACTIONS GRID */
+.waiting-actions-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    margin-top: 18px;
+    width: 100%;
+}
+
+.action-card-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: #ffffff;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.action-card-btn:hover {
+    background: rgba(255, 255, 255, 0.14);
+    border-color: rgba(255, 255, 255, 0.25);
+    transform: translateY(-2px);
+}
+
+.action-card-btn:active {
+    transform: scale(0.97);
+}
+
+.action-card-btn.primary-action {
+    background: linear-gradient(135deg, #7c5cff, #5028f0);
+    border-color: rgba(124, 92, 255, 0.4);
+    box-shadow: 0 4px 15px rgba(124, 92, 255, 0.35);
+}
+
+.action-card-btn.primary-action:hover {
+    box-shadow: 0 6px 20px rgba(124, 92, 255, 0.5);
+}
+
+.action-card-btn.accent-action {
+    background: linear-gradient(135deg, #00c6ff, #0072ff);
+    border-color: rgba(0, 198, 255, 0.4);
+    box-shadow: 0 4px 15px rgba(0, 114, 255, 0.3);
+}
+
+/* SPEAKING GLOW */
+.video-tile.speaking {
+    box-shadow: 0 0 0 3px #00d9ff, 0 0 30px rgba(0, 217, 255, 0.45);
+    border-color: #00d9ff;
+}
+
+/* REMOTE OVERLAY META */
+.remote-meta {
+    position: absolute;
+    bottom: 16px;
+    left: 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    z-index: 4;
+}
+
+.remote-name {
+    padding: 6px 12px;
+    border-radius: 8px;
+    background: rgba(0, 0, 0, 0.65);
+    backdrop-filter: blur(8px);
+    font-size: 13px;
+    font-weight: 600;
+    color: #ffffff;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.remote-status-pill {
+    padding: 6px 10px;
+    border-radius: 8px;
+    background: rgba(54, 217, 138, 0.2);
+    border: 1px solid rgba(54, 217, 138, 0.4);
+    color: #36d98a;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.remote-camera-off {
+    z-index: 2;
+}
+
+.camera-off-avatar {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #7c5cff, #00d9ff);
+    color: #ffffff;
+    font-size: 32px;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+/* LOCAL META */
+.local-meta {
+    position: absolute;
+    bottom: 8px;
+    left: 8px;
+    right: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    z-index: 4;
+}
+
+.local-name {
+    padding: 3px 8px;
+    border-radius: 6px;
+    background: rgba(0, 0, 0, 0.65);
+    backdrop-filter: blur(6px);
+    font-size: 11px;
+    font-weight: 600;
+    color: #ffffff;
+}
+
+.local-mic-icon {
+    font-size: 12px;
+    filter: drop-shadow(0 1px 3px rgba(0,0,0,0.8));
+}
+
+/* BADGES ON CONTROL BUTTONS */
+.control-btn {
+    position: relative;
+}
+
+.control-badge {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    background: #7c5cff;
+    color: #ffffff;
+    font-size: 10px;
+    font-weight: bold;
+    padding: 2px 6px;
+    border-radius: 10px;
+    border: 2px solid #080b12;
+}
+
+.control-badge.unread-badge {
+    background: #ff4757;
+    animation: bounce 0.4s ease;
+}
+
+@keyframes bounce {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.3); }
+}
+
+/* REACTIONS PICKER */
+.reactions-picker {
+    position: absolute;
+    bottom: 95px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: 30px;
+    background: rgba(18, 24, 38, 0.95);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(16px);
+    box-shadow: 0 10px 35px rgba(0, 0, 0, 0.5);
+    z-index: 100;
+    animation: slideUpFade 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slideUpFade {
+    from { opacity: 0; transform: translate(-50%, 15px); }
+    to { opacity: 1; transform: translate(-50%, 0); }
+}
+
+.reaction-emoji-btn {
+    border: 0;
+    background: transparent;
+    font-size: 24px;
+    cursor: pointer;
+    padding: 4px 6px;
+    border-radius: 50%;
+    transition: transform 0.15s ease;
+}
+
+.reaction-emoji-btn:hover {
+    transform: scale(1.35);
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.reaction-emoji-btn:active {
+    transform: scale(1.1);
+}
+
+/* FLOATING REACTIONS */
+.floating-reactions-container {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 50;
+    overflow: hidden;
+}
+
+.floating-emoji {
+    position: absolute;
+    bottom: 80px;
+    font-size: 36px;
+    user-select: none;
+    animation: floatUpAndFade 2.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
+@keyframes floatUpAndFade {
+    0% {
+        opacity: 0;
+        transform: translateY(0) scale(0.5);
+    }
+    15% {
+        opacity: 1;
+        transform: translateY(-40px) scale(1.2);
+    }
+    80% {
+        opacity: 0.9;
+        transform: translateY(-260px) scale(1);
+    }
+    100% {
+        opacity: 0;
+        transform: translateY(-380px) scale(0.8);
+    }
+}
+
+/* PARTICIPANTS LIST DIVIDER & BUTTON */
+.participants-section-divider {
+    padding: 10px 0 6px;
+    font-size: 11px;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    font-weight: 700;
+}
+
+.mini-invite-btn {
+    margin-top: 14px;
+    width: 100%;
+    padding: 10px;
+    border-radius: 8px;
+    background: rgba(124, 92, 255, 0.15);
+    border: 1px solid rgba(124, 92, 255, 0.3);
+    color: #a78bfa;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.mini-invite-btn:hover {
+    background: rgba(124, 92, 255, 0.25);
+    color: #ffffff;
+}
+
+/* SHARE MODAL FIELDS */
+.share-field-group {
+    text-align: left;
+}
+
+.share-field-group label {
+    display: block;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: #94a3b8;
+    margin-bottom: 5px;
+    font-weight: 600;
+}
+
+.truncated-url {
+    font-family: monospace;
+    font-size: 12px;
+    color: #00d9ff;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 220px;
+}
+
+.modal-footer-actions {
+    margin-top: 20px;
+}
+
+.native-share-btn {
+    width: 100%;
+    padding: 12px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: #ffffff;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.native-share-btn:hover {
+    background: rgba(255, 255, 255, 0.14);
+}
+
+@media (max-width: 600px) {
+    .waiting-actions-grid {
+        grid-template-columns: 1fr;
+    }
+    .meeting-center-info {
+        display: none;
+    }
+}
